@@ -370,6 +370,7 @@ app.get("/export", async (req, res) => {
   const deviceName = di.toString();
   var queryDate = new Date(startDateStr.split("-").reverse().join("-").toString());
   var nextDate = new Date(endDateStr.split("-").reverse().join("-").toString());
+  nextDate.setHours(23, 59, 59, 999);
   var responseJSON = {};
 
   try {
