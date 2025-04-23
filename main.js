@@ -6,6 +6,7 @@ const UserSchema = require("./users-schema")
 const userSchema = require("./users-schema")
 const deviceInfoSchema = require("./device-info-schema")
 const os = require("os");
+const { exec } = require("child_process")
 const PORT = 8000
 
 const app = express();
@@ -22,14 +23,7 @@ const db = mongoose.connect('mongodb+srv://Varun:Varun9999@wifi-server.kvwhr.mon
 .catch(err => console.error('Connection error:', err));
 
 const Users = mongoose.model("Users", UserSchema, "Users")
-// Users.create({
-//   name : "Varun Test",
-//   email : "newtemp@gmail.com",
-//   phone: "9999",
-//   companyName : 'k',
-//   password : "002",
-//   devices: []
-// })
+
 //Applying API Routes
 //Home route end point for the URL
 app.get("/", (req, res) => {
@@ -358,6 +352,77 @@ app.get('/createDevice',(req,res)=>{
     res.send(e.message);
   }
 })
+
+//Creating API Route for Getting Export Data
+// Parameters : "ui" -> User Login ID
+// "di" : Device ID
+// "startDate" : Date Range Start (DateTime Datatype)
+// "endDate" : Date Range End (DateTime Datatype)
+
+
+app.get("/export", async (req, res) => {
+  var params = req.query;
+  var ui = params.ui;
+  var di = params.di;
+  var startDateStr = params.startDate; // Expecting "DD-MM-YYYY" format
+  var endDateStr = params.endDate;     // Expecting "DD-MM-YYYY" format
+
+  const deviceName = di.toString();
+  var queryDate = new Date(startDateStr.split("-").reverse().join("-").toString());
+  var nextDate = new Date(endDateStr.split("-").reverse().join("-").toString());
+  var responseJSON = {};
+
+  try {
+    const collectionExists = await mongoose.connection.db.listCollections({ name: deviceName }).toArray();
+    if (collectionExists.length === 0) {
+      responseJSON.status = 400;
+      responseJSON.dataAvailable = false;
+      responseJSON.message = "Cannot Find Device";
+      return res.send(responseJSON);
+    }
+
+    const currentDevice = mongoose.model(deviceName, DeviceSchema, deviceName);
+    var data = await currentDevice.find({ dateTime: { $gte: queryDate, $lte: nextDate } }, { _id: 0, __v: 0 }).lean();
+
+    if (data.length === 0) {
+      responseJSON.dataAvailable = false;
+      responseJSON.message = "No data found for the selected date range.";
+    } else {
+      const groupedData = data.reduce((acc, item) => {
+        const date = new Date(item.dateTime).toLocaleDateString(); // Extract date part
+        if (!acc[date]) {
+          acc[date] = [];
+        }
+        acc[date].push(item);
+        return acc;
+      }, {});
+
+      responseJSON.data = groupedData;
+      responseJSON.dataAvailable = true;
+      responseJSON.message = "Data Found";
+    }
+
+    console.log("Data fetched:", responseJSON);
+    res.send(responseJSON);
+
+  } catch (e) {
+    console.error("Error:", e.message);
+    res.status(500).send({
+      validResponse :false,
+      message : "Internal Server Error",
+    });
+  }
+});
+
+function getNextDay(dateString) {
+  const [day, month, year] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + 1);
+  return date;
+}
+
+
+
 function saveInfo(data) {
 
     console.log(`${data.date}  ${data.time}   ${data.weight}`);
