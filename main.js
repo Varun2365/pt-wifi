@@ -387,6 +387,7 @@ app.get("/export", async (req, res) => {
 
     if (data.length === 0) {
       responseJSON.dataAvailable = false;
+      responseJSON.validResponse = false;
       responseJSON.message = "No data found for the selected date range.";
       responseJSON.data = [];
     } else {
