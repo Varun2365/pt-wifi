@@ -388,6 +388,7 @@ app.get("/export", async (req, res) => {
     if (data.length === 0) {
       responseJSON.dataAvailable = false;
       responseJSON.message = "No data found for the selected date range.";
+      responseJSON.data = [];
     } else {
       const groupedData = data.reduce((acc, item) => {
         const date = new Date(item.dateTime).toLocaleDateString(); // Extract date part
