@@ -1,4 +1,5 @@
 const express = require("express")
+const moment = require('moment-timezone');
 require('dotenv').config()
 const mongoose = require("mongoose")
 const DeviceSchema = require("./device-id-schema")
@@ -427,24 +428,51 @@ function getNextDay(dateString) {
 
 
 function saveInfo(data) {
+  console.log(`${data.date}  ${data.time}   ${data.weight}`);
+  const currentDevice = mongoose.model(data.deviceid, DeviceSchema, data.deviceid);
+  const rDate = data.date;
+  let rTime = data.time; // Make rTime mutable
 
-    console.log(`${data.date}  ${data.time}   ${data.weight}`);
-    const currentDevice = mongoose.model(data.deviceid, DeviceSchema, data.deviceid);
-    const rDate = data.date;
-    const rTime = data.time;
-  
+  let dateTimeObject;
+
+  try {
     const [day, month, year] = rDate.split("/").map(Number);
-    const [hours, minutes, seconds] = rTime.split(":").map(Number);
-    let dateTimeObject = new Date(year, month - 1, day, hours, minutes, seconds);
-    const IST_OFFSET = 5.5 * 60 * 60 * 0;
-    dateTimeObject = new Date(dateTimeObject.getTime() + IST_OFFSET);
-    currentDevice.create({
-      weight: data.weight,
-      sno: parseInt(data['s.no.']),
-      dateTime: dateTimeObject
-    })
-    
+
+    // *** Improved Time Parsing ***
+    // 1. Replace any non-digit, non-colon characters with colons.
+    rTime = rTime.replace(/[^0-9:]/g, ':');
+    // 2. Split by colon.  Handle missing parts.
+    const timeParts = rTime.split(':');
+    const hours = parseInt(timeParts[0] || 0, 10); // Default to 0 if missing
+    const minutes = parseInt(timeParts[1] || 0, 10);
+    const seconds = parseInt(timeParts[2] || 0, 10);
+
+    // *** Parse as IST Directly  ***
+    dateTimeObject = moment.tz(
+      `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+      'YYYY-MM-DD HH:mm:ss',
+      'Asia/Kolkata'
+    ).toDate();
+
+
+  } catch (error) {
+    console.error("Error creating date-time object from provided data:", error.message);
+    console.log("Using live date and time of India.");
+    dateTimeObject = moment().tz('Asia/Kolkata').toDate();
   }
+
+  currentDevice.create({
+    weight: data.weight,
+    sno: parseInt(data['s.no.']),
+    dateTime: dateTimeObject
+  })
+    .then(() => {
+      console.log("Data saved successfully.");
+    })
+    .catch((error) => {
+      console.error("Error saving data:", error.message);
+    });
+}
 
 function getNextDay(date) {
   const nextDate = new Date(date);
