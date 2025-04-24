@@ -436,7 +436,7 @@ function saveInfo(data) {
     const [day, month, year] = rDate.split("/").map(Number);
     const [hours, minutes, seconds] = rTime.split(":").map(Number);
     let dateTimeObject = new Date(year, month - 1, day, hours, minutes, seconds);
-    const IST_OFFSET = 5.5 * 60 * 60 * 000;
+    const IST_OFFSET = 5.5 * 60 * 60 * 0;
     dateTimeObject = new Date(dateTimeObject.getTime() + IST_OFFSET);
     currentDevice.create({
       weight: data.weight,
