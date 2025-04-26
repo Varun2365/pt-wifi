@@ -185,6 +185,11 @@ app.get('/users/data', async (req, res) => {
           message: "Account Can Be Created",
           validResponse: true
         });
+      }else{
+        res.send({
+          message : "Email already exists in database. Try logging in",
+          validResponse:false,
+        })
       }
     } catch (error) {
       console.error("Error checking email:", error);
